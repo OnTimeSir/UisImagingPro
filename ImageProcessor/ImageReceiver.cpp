@@ -15,6 +15,8 @@ ImageReceiver::ImageReceiver(HWND hMainWindow)
 	,m_dequeLocker(0,"DequeLocker",0)
 {
 	m_hMainWindow = hMainWindow;	
+	m_nImagesPerProcess = 4;
+	m_fResaultSize = 3.0f;
 }
 
 
@@ -184,31 +186,45 @@ UINT ImageReceiver::DoHandleImageProcess(LPVOID lpParameter)
 {
 	BITMAP* pBitmap = NULL;
 	ImageReceiver * pThis = (ImageReceiver*)lpParameter;
-	while (1) {
+	while (1) 
+	{
 		m_dequeLocker.Lock();
-		if (0 != m_qRecvdData.size() && m_imgs.size() < MAX_IMAGES_PER_PROCESS) {
+		if (0 != m_qRecvdData.size() && m_imgs.size() < m_nImagesPerProcess)
+		{
 			pBitmap = m_qRecvdData.back();
 			m_qRecvdData.pop_back();
-			if (NULL != pBitmap) {
+			if (NULL != pBitmap)
+			{
 				m_imgs.push_back(pBitmap);
 			}
 		} 
 		m_dequeLocker.Unlock();
 
-		if (MAX_IMAGES_PER_PROCESS == m_imgs.size()) { //达到队列最大值，开始本次数据处理
+		if (m_nImagesPerProcess == m_imgs.size())
+		{ //队列达到一次处理图片数，开始本次数据处理
 			BITMAP* bitmap = new BITMAP();
-			int result = m_uisExtendImaging.ProcessImage(m_imgs,*bitmap);
-			if (-1 == result) {       //表示拼接出现错误结果，需要终止此次图片处理过程
+			bool resault = m_uisExtendImaging.StitchImage(m_imgs, *bitmap);
+			float curSize = (float)bitmap->bmWidth / bitmap->bmHeight;
+			if (FALSE == resault)
+			{
+				//表示拼接出现错误结果，需要终止此次图片处理过程
 				PostMessage(pThis->m_hMainWindow, WM_FINAL_RESULT, -1, (LPARAM)(new CString("ImageProcessThread：a error-result returned by Func 'ProcessImage'")));
-			}else if (0 == result) {  //表示拼接后的图片是最终结果，bitmap保存此次拼接的最终结果，通知主界面接收并显示结果，并关闭接收与处理线程
-				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("ImageProcessThread：a final result returned by Func 'ProcessImage', Yeah!!")));			
+			}
+			else if(TRUE == resault && curSize >= m_fResaultSize)
+			{
+				//表示拼接后的图片是最终结果，bitmap保存此次拼接的最终结果，通知主界面接收并显示结果，并关闭接收与处理线程
+				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("ImageProcessThread：a final result returned by Func 'ProcessImage', Yeah!!")));
 				SendMessage(pThis->m_hMainWindow, WM_FINAL_RESULT, 0, (LPARAM)(bitmap));
-			}else if (1 == result) {  //表示拼接后的图片不是最终结果，bitmap保存此次拼接的中间结果
+			}
+			else if (TRUE == resault && curSize < m_fResaultSize)
+			{
+				//表示拼接后的图片不是最终结果，bitmap保存此次拼接的中间结果
 				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("ImageProcessThread：a inter-result returned by Func 'ProcessImage'")));
-				if (NULL != bitmap) {
-					//清空vector，释放图片空间
-					vector <BITMAP*>::iterator  iterp;     //定义迭代器
+				if (NULL != bitmap)
+				{
+					vector <BITMAP*>::iterator iterp;
 					iterp = m_imgs.begin();
+					//清空vector，释放图片空间
 					while (iterp != m_imgs.end())
 					{
 						delete ((BITMAP*)(*iterp))->bmBits;
@@ -218,10 +234,17 @@ UINT ImageReceiver::DoHandleImageProcess(LPVOID lpParameter)
 					m_imgs.swap(vector <BITMAP*>());
 					m_imgs.push_back(bitmap);    //将中间结果塞回vector
 				}
-			}else {                   //非正常返回值,按出错处理
+			}
+			else
+			{
+				//非正常返回值,按出错处理
 				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, -1, (LPARAM)(new CString("ImageProcessThread：a unexpected-result(Not -1 0 1) returned by Func 'ProcessImage'")));
 			}
+		}
 
+		if (0 == m_qRecvdData.size())
+		{
+			Sleep(10);
 		}
 	}
 }

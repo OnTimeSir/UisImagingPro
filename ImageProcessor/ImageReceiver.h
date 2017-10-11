@@ -9,8 +9,6 @@ using namespace std;
 class ImageReceiver
 {
 public:
-	const static size_t MAX_IMAGES_PER_PROCESS = 4;
-
 	ImageReceiver(HWND hMainWindow);
 	virtual ~ImageReceiver(void);
 
@@ -35,6 +33,8 @@ private:
 	HANDLE m_hRecvThread2;
 	HANDLE m_hImageProcessThread;
 
+	float m_fResaultSize;     //最终结果图的宽高比
+	int m_nImagesPerProcess; //一次处理的帧数
 	CUisExtendImaging m_uisExtendImaging;
 
 private:

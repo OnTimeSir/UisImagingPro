@@ -33,8 +33,10 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
-	afx_msg void OnBnClickedOk();
+	afx_msg void OnBnClickedStart();
+	afx_msg void OnBnClickedStop();
 	afx_msg LRESULT OnReportState(WPARAM wparam, LPARAM lparam);
+
 	afx_msg LRESULT OnFinalResultGet(WPARAM wparam, LPARAM lparam);
 
 private:
@@ -44,4 +46,5 @@ private:
 private:
 	ImageReceiver* m_imageReceiver;
 	BITMAP* m_finalResult;
+
 };

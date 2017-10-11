@@ -33,9 +33,11 @@ void CImageProcessorDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CImageProcessorDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDOK, &CImageProcessorDlg::OnBnClickedOk)
+	ON_BN_CLICKED(IDOK, &CImageProcessorDlg::OnBnClickedStart)
+	ON_BN_CLICKED(IDCANCEL, &CImageProcessorDlg::OnBnClickedStop)
 	ON_MESSAGE(WM_REPORT_STATE, OnReportState)
 	ON_MESSAGE(WM_FINAL_RESULT, OnFinalResultGet)
+
 END_MESSAGE_MAP()
 
 // CImageProcessorDlg 消息处理程序
@@ -81,14 +83,14 @@ BOOL CImageProcessorDlg::OnInitDialog()
 	}
 	else {
 		ReportState("Open " + strFile + " success.");
-		int len = oFile.GetLength();
+		size_t len = oFile.GetLength();
 		CString strData;
 		TCHAR * buf = new TCHAR[len];
 		oFile.Read(buf, len);
 		strData = buf;
 		delete[] buf;
 		oFile.Close();
-		int nPos = strData.Find("<m_GraphicsRect");
+		size_t nPos = strData.Find("<m_GraphicsRect");
 		strData = strData.Mid(nPos + strlen("<m_rcImageArea"));
 		globalDataStruct.rectImageArea.left = GetNum(strData, _T("left=\""));;
 		globalDataStruct.rectImageArea.top = GetNum(strData, _T("top=\""));;
@@ -101,7 +103,8 @@ BOOL CImageProcessorDlg::OnInitDialog()
 	}
 
 	//设置共享内存访问Key
-	globalDataStruct.strSharedMemoryKey = _T("UIS4DDataTransfer");
+	//globalDataStruct.strSharedMemoryKey = _T("UIS4DDataTransfer");
+	globalDataStruct.strSharedMemoryKey = _T("UIS4DFrameData");
 	ReportState("Set shared memory key: " + globalDataStruct.strSharedMemoryKey);
 
 	//创建图像接收对象
@@ -161,14 +164,21 @@ HCURSOR CImageProcessorDlg::OnQueryDragIcon()
 
 int CImageProcessorDlg::GetNum(CString & strData, LPCSTR lpszTag)
 {
-	int res = 0;
+	size_t res = 0;
 	return res = atoi(strData.Mid(strData.Find(lpszTag) + _tcslen(lpszTag)));
 }
 
-void CImageProcessorDlg::OnBnClickedOk()
+void CImageProcessorDlg::OnBnClickedStart()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	m_imageReceiver->startReceive();
+}
+
+void CImageProcessorDlg::OnBnClickedStop()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_imageReceiver->stop();
+
 }
 
 LRESULT CImageProcessorDlg::OnReportState(WPARAM wparam, LPARAM lparam)
