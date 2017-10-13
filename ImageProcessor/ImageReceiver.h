@@ -13,7 +13,7 @@ public:
 	virtual ~ImageReceiver(void);
 
 	void startReceive();
-	void stop();
+	void stopReceive();
 private:
 	HWND m_hMainWindow;         //主窗口界面
 	HANDLE m_hFileMapping;      //共享内存文件映射句柄
@@ -25,7 +25,8 @@ private:
 
 	deque<BITMAP*> m_qRecvdData;  //存放从共享内存中取得的数据
 	vector<BITMAP*> m_imgs;       //存放给处理函数的向量
-	BITMAP* m_finalResult;        //最终的处理结果
+	BITMAP* m_Result;             //处理结果
+	bool m_bOnScanning;           //是否在扫描中
 
 	CMutex m_dequeLocker;         //访问队列的锁
 	

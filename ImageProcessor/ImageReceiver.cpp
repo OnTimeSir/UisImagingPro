@@ -5,28 +5,28 @@
 
 
 ImageReceiver::ImageReceiver(HWND hMainWindow)
-	//:m_oEvent1(FALSE, FALSE, (CString(globalDataStruct.strSharedMemoryKey) + _T("Event1")).GetBuffer())
- //   ,m_oEvent2(FALSE, FALSE, (CString(globalDataStruct.strSharedMemoryKey) + _T("Event1")).GetBuffer())
-	: m_oEvent1(FALSE, FALSE, _T("UIS4DFrame1ValidEvent"))
-	, m_oEvent2(FALSE, FALSE, _T("UIS4DFrame2ValidEvent"))
+	:m_oEvent1(FALSE, FALSE, (CString(globalDataStruct.strSharedMemoryKey) + _T("Event1")).GetBuffer())
+    ,m_oEvent2(FALSE, FALSE, (CString(globalDataStruct.strSharedMemoryKey) + _T("Event1")).GetBuffer())
 	,m_hRecvThread1(NULL)
 	,m_hRecvThread2(NULL)
 	,m_hImageProcessThread(NULL)
 	,m_dequeLocker(0,"DequeLocker",0)
 {
+	m_bOnScanning = FALSE;
 	m_hMainWindow = hMainWindow;	
 	m_nImagesPerProcess = 4;
-	m_fResaultSize = 3.0f;
+	m_fResaultSize = 1.0f;
 }
 
 
 ImageReceiver::~ImageReceiver()
 {
-	stop();
+	stopReceive();
 }
 
 void ImageReceiver::startReceive()
 {
+	m_bOnScanning = TRUE;
 	PostMessage(m_hMainWindow,WM_REPORT_STATE,0, (LPARAM)(new CString("Start to receive image...")));
 	
 	//打开共享内存
@@ -59,9 +59,9 @@ void ImageReceiver::startReceive()
 	SetThreadPriority(m_hImageProcessThread, THREAD_PRIORITY_NORMAL);
 }
 
-void ImageReceiver::stop()
+void ImageReceiver::stopReceive()
 {
-	PostMessage(m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("To stop all work thread...")));
+	m_bOnScanning = FALSE;
 	if (m_hRecvThread1)
 	{
 		TerminateThread(m_hRecvThread1, 0);
@@ -80,6 +80,7 @@ void ImageReceiver::stop()
 		PostMessage(m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("Buf2RecvThread is stoped...")));
 	}
 
+	PostMessage(m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("To stop all work thread...")));
 	if (m_hImageProcessThread)
 	{
 		TerminateThread(m_hImageProcessThread, 0);
@@ -186,7 +187,7 @@ UINT ImageReceiver::DoHandleImageProcess(LPVOID lpParameter)
 {
 	BITMAP* pBitmap = NULL;
 	ImageReceiver * pThis = (ImageReceiver*)lpParameter;
-	while (1) 
+	while (1)
 	{
 		m_dequeLocker.Lock();
 		if (0 != m_qRecvdData.size() && m_imgs.size() < m_nImagesPerProcess)
@@ -205,21 +206,22 @@ UINT ImageReceiver::DoHandleImageProcess(LPVOID lpParameter)
 			BITMAP* bitmap = new BITMAP();
 			bool resault = m_uisExtendImaging.StitchImage(m_imgs, *bitmap);
 			float curSize = (float)bitmap->bmWidth / bitmap->bmHeight;
-			if (FALSE == resault)
+			if (TRUE == m_bOnScanning && FALSE == resault)
 			{
 				//表示拼接出现错误结果，需要终止此次图片处理过程
-				PostMessage(pThis->m_hMainWindow, WM_FINAL_RESULT, -1, (LPARAM)(new CString("ImageProcessThread：a error-result returned by Func 'ProcessImage'")));
+				PostMessage(pThis->m_hMainWindow, WM_SHOW_RESULT, -1, (LPARAM)(new CString("ImageProcessThread：a error-result returned by Func 'ProcessImage'")));
 			}
-			else if(TRUE == resault && curSize >= m_fResaultSize)
+			else if(FALSE == m_bOnScanning || TRUE == resault && curSize >= m_fResaultSize)
 			{
 				//表示拼接后的图片是最终结果，bitmap保存此次拼接的最终结果，通知主界面接收并显示结果，并关闭接收与处理线程
 				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("ImageProcessThread：a final result returned by Func 'ProcessImage', Yeah!!")));
-				SendMessage(pThis->m_hMainWindow, WM_FINAL_RESULT, 0, (LPARAM)(bitmap));
+				SendMessage(pThis->m_hMainWindow, WM_SHOW_RESULT, 0, (LPARAM)(bitmap));
 			}
-			else if (TRUE == resault && curSize < m_fResaultSize)
+			else if (TRUE == m_bOnScanning && TRUE == resault && curSize < m_fResaultSize)
 			{
 				//表示拼接后的图片不是最终结果，bitmap保存此次拼接的中间结果
 				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, 0, (LPARAM)(new CString("ImageProcessThread：a inter-result returned by Func 'ProcessImage'")));
+				SendMessage(pThis->m_hMainWindow, WM_SHOW_RESULT, 0, (LPARAM)(bitmap));
 				if (NULL != bitmap)
 				{
 					vector <BITMAP*>::iterator iterp;
@@ -238,13 +240,13 @@ UINT ImageReceiver::DoHandleImageProcess(LPVOID lpParameter)
 			else
 			{
 				//非正常返回值,按出错处理
-				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, -1, (LPARAM)(new CString("ImageProcessThread：a unexpected-result(Not -1 0 1) returned by Func 'ProcessImage'")));
+				PostMessage(pThis->m_hMainWindow, WM_REPORT_STATE, -1, (LPARAM)(new CString("ImageProcessThread：a unexpected-result returned by Func 'ProcessImage'")));
 			}
 		}
 
 		if (0 == m_qRecvdData.size())
 		{
-			Sleep(10);
+			Sleep(50);
 		}
 	}
 }

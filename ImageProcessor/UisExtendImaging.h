@@ -26,9 +26,10 @@ public:
 	*/
 	bool StitchImage(vector<BITMAP* >& vect, BITMAP& bitmap);
 private:
+	void SetParameters();
+	void SetPipeline();
 	void Bitmap2Mat(BITMAP& bitmap, Mat& mat);
 	void Mat2Bitmap(Mat& mat, BITMAP& bitmap);
-
 	//输入图片序列
 	vector<Mat> m_InputImage;
 	//拼接结果图片

@@ -22,7 +22,7 @@ CImageProcessorDlg::CImageProcessorDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_IMAGEPROCESSOR_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-	m_finalResult = NULL;
+	m_Result = NULL;
 }
 
 void CImageProcessorDlg::DoDataExchange(CDataExchange* pDX)
@@ -36,7 +36,7 @@ BEGIN_MESSAGE_MAP(CImageProcessorDlg, CDialogEx)
 	ON_BN_CLICKED(IDOK, &CImageProcessorDlg::OnBnClickedStart)
 	ON_BN_CLICKED(IDCANCEL, &CImageProcessorDlg::OnBnClickedStop)
 	ON_MESSAGE(WM_REPORT_STATE, OnReportState)
-	ON_MESSAGE(WM_FINAL_RESULT, OnFinalResultGet)
+	ON_MESSAGE(WM_SHOW_RESULT, OnResultGet)
 
 END_MESSAGE_MAP()
 
@@ -134,8 +134,8 @@ void CImageProcessorDlg::OnPaint()
 		// 绘制图标
 		dc.DrawIcon(x, y, m_hIcon);
 
-		if (m_finalResult) {
-			HBITMAP handle = CreateBitmapIndirect(m_finalResult);
+		if (m_Result) {
+			HBITMAP handle = CreateBitmapIndirect(m_Result);
 			CDC *pDC = ((CStatic*)GetDlgItem(IDC_STATIC))->GetDC();
 			CDC memDC;
 			memDC.CreateCompatibleDC(pDC);
@@ -177,7 +177,7 @@ void CImageProcessorDlg::OnBnClickedStart()
 void CImageProcessorDlg::OnBnClickedStop()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	m_imageReceiver->stop();
+	m_imageReceiver->stopReceive();
 
 }
 
@@ -189,16 +189,16 @@ LRESULT CImageProcessorDlg::OnReportState(WPARAM wparam, LPARAM lparam)
 	return 0;
 }
 
-LRESULT CImageProcessorDlg::OnFinalResultGet(WPARAM wparam, LPARAM lparam)
+LRESULT CImageProcessorDlg::OnResultGet(WPARAM wparam, LPARAM lparam)
 {
 	if(0 == wparam)
 	{
-		if (NULL != m_finalResult) {
-			delete m_finalResult;
+		if (NULL != m_Result) {
+			delete m_Result;
 		}
-		m_finalResult = new BITMAP(*(BITMAP*)(lparam));
+		m_Result = new BITMAP(*(BITMAP*)(lparam));
+		//this->Invalidate();
 	}
-	m_imageReceiver->stop();
 	return 0;
 }
 

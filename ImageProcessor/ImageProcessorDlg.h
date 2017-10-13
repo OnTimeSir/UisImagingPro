@@ -6,7 +6,7 @@
 #include "afxwin.h"
 
 #define WM_REPORT_STATE WM_USER+1
-#define WM_FINAL_RESULT WM_USER+2
+#define WM_SHOW_RESULT WM_USER+2
 
 // CImageProcessorDlg ¶Ô»°¿ò
 class CImageProcessorDlg : public CDialogEx
@@ -36,8 +36,7 @@ public:
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
 	afx_msg LRESULT OnReportState(WPARAM wparam, LPARAM lparam);
-
-	afx_msg LRESULT OnFinalResultGet(WPARAM wparam, LPARAM lparam);
+	afx_msg LRESULT OnResultGet(WPARAM wparam, LPARAM lparam);
 
 private:
 	int GetNum(CString & strData, LPCSTR lpszTag);
@@ -45,6 +44,6 @@ private:
 
 private:
 	ImageReceiver* m_imageReceiver;
-	BITMAP* m_finalResult;
+	BITMAP* m_Result;
 
 };
